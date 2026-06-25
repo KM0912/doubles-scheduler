@@ -30,24 +30,24 @@
 
 ## Phase 1 - MVP
 
-| ID    | Scope                              | SPEC            | Status  | Tests / Check                | Notes                                                                             |
-| ----- | ---------------------------------- | --------------- | ------- | ---------------------------- | --------------------------------------------------------------------------------- |
-| P1-01 | public types 定義                  | §5, §7, §14     | todo    | typecheck                    | `PlayerId`, `Round`, `SchedulerState`, error/warning types                        |
-| P1-02 | `createSchedulerState`             | §6.1            | todo    | `tests/state.test.ts`        | JSON-friendly state を返す                                                        |
-| P1-03 | state 更新 API                     | §6.5, §8.4      | todo    | `tests/state.test.ts`        | `addPlayer`, `removePlayer`, `setCourtCount`, `setPlayerResting`, `setFixedPairs` |
-| P1-04 | canonical key utilities            | §12.1           | todo    | `tests/stats.test.ts`        | pair / team / match key                                                           |
-| P1-05 | `computePlayerStats`               | §12             | todo    | `tests/stats.test.ts`        | `games`, `rests`, `sitOuts`, wins/losses                                          |
-| P1-06 | `computePairStats`                 | §12             | todo    | `tests/stats.test.ts`        | pair order normalization                                                          |
-| P1-07 | `validateRound` hard constraints   | §6.3, §9, §14   | todo    | `tests/validation.test.ts`   | manual edit flow の土台                                                           |
-| P1-08 | `selectSittingOut`                 | §8.1, §8.2      | todo    | `tests/generator.test.ts`    | games 昇順 / rests 降順 / id 昇順                                                 |
-| P1-09 | seed 対応 random utility           | §7, §11         | todo    | deterministic test           | 同じ state/options で同じ結果                                                     |
-| P1-10 | `generateNextRound` minimal random | §6.2, §10, §11  | todo    | `tests/generator.test.ts`    | 4人/8人/6人/4人未満                                                               |
-| P1-11 | fixed pair 対応                    | §9.3            | todo    | generator + validation tests | 片方だけ出場は invalid                                                            |
-| P1-12 | `applyRound`                       | §6.4, §13       | blocked | `tests/state.test.ts`        | invalid 時の扱いを §18.2 で決める                                                 |
-| P1-13 | `leastPlayed` strategy             | §11, §19.3      | todo    | `tests/strategies.test.ts`   | 出場回数が少ない player を優先                                                    |
-| P1-14 | `avoidRepeatedPair` strategy       | §11, §19.3      | todo    | `tests/strategies.test.ts`   | 未経験 pair を優先                                                                |
-| P1-15 | public exports 整理                | §16             | todo    | import smoke test            | `src/index.ts`                                                                    |
-| P1-16 | README quick start 更新            | README, §6, §15 | todo    | docs review                  | MVP API に合わせて同期                                                            |
+| ID    | Scope                              | SPEC            | Status | Tests / Check                | Notes                                                                             |
+| ----- | ---------------------------------- | --------------- | ------ | ---------------------------- | --------------------------------------------------------------------------------- |
+| P1-01 | public types 定義                  | §5, §7, §14     | done   | typecheck                    | `PlayerId`, `Round`, `SchedulerState`, error/warning types                        |
+| P1-02 | `createSchedulerState`             | §6.1            | done   | `tests/state.test.ts`        | JSON-friendly state を返す                                                        |
+| P1-03 | state 更新 API                     | §6.5, §8.4      | done   | `tests/state.test.ts`        | `addPlayer`, `removePlayer`, `setCourtCount`, `setPlayerResting`, `setFixedPairs` |
+| P1-04 | canonical key utilities            | §12.1           | done   | `tests/stats.test.ts`        | pair / team / match key                                                           |
+| P1-05 | `computePlayerStats`               | §12             | done   | `tests/stats.test.ts`        | `games`, `rests`, `sitOuts`, wins/losses                                          |
+| P1-06 | `computePairStats`                 | §12             | done   | `tests/stats.test.ts`        | pair order normalization                                                          |
+| P1-07 | `validateRound` hard constraints   | §6.3, §9, §14   | done   | `tests/validation.test.ts`   | manual edit flow の土台                                                           |
+| P1-08 | `selectSittingOut`                 | §8.1, §8.2      | done   | `tests/generator.test.ts`    | games 昇順 / rests 降順 / id 昇順                                                 |
+| P1-09 | seed 対応 random utility           | §7, §11         | done   | deterministic test           | 同じ state/options で同じ結果                                                     |
+| P1-10 | `generateNextRound` minimal random | §6.2, §10, §11  | done   | `tests/generator.test.ts`    | 4人/8人/6人/4人未満                                                               |
+| P1-11 | fixed pair 対応                    | §9.3            | done   | generator + validation tests | 片方だけ出場は invalid                                                            |
+| P1-12 | `applyRound`                       | §6.4, §13       | done   | `tests/state.test.ts`        | invalid 時は `ApplyRoundError` を throw（D-01 確定）                              |
+| P1-13 | `leastPlayed` strategy             | §11, §19.3      | done   | `tests/strategies.test.ts`   | 出場回数が少ない player を優先                                                    |
+| P1-14 | `avoidRepeatedPair` strategy       | §11, §19.3      | done   | `tests/strategies.test.ts`   | 未経験 pair を優先                                                                |
+| P1-15 | public exports 整理                | §16             | done   | import smoke test            | `src/index.ts`                                                                    |
+| P1-16 | README quick start 更新            | README, §6, §15 | done   | docs review                  | MVP API に合わせて同期                                                            |
 
 ## Phase 2 - Extensions
 
@@ -74,13 +74,13 @@
 
 SPEC §18.2 の未決事項。決定した場合は、このファイルだけでなく `docs/SPEC.md` と必要に応じて `README.md` を更新する。
 
-| ID   | Decision                                                                         | Needed Before | Status | Notes                                |
-| ---- | -------------------------------------------------------------------------------- | ------------- | ------ | ------------------------------------ |
-| D-01 | `applyRound` は invalid round に対して throw するか result object を返すか       | P1-12         | open   | ライブラリ利用者の ergonomics に影響 |
-| D-02 | `Round.id` / `Match.id` をライブラリが生成するか、アプリ側から渡せるようにするか | P1-10         | open   | deterministic generation と関係      |
-| D-03 | `createdAt` をライブラリが付与するか、アプリ側の責務にするか                     | P1-10         | open   | pure function / 再現性と関係         |
-| D-04 | `state.players` から remove された player の表示名を履歴表示でどう扱うか         | P1-03         | open   | v1 では app 側 archive でもよい      |
-| D-05 | `balanced` / `custom scorer` を Phase 1 に前倒しするか                           | P1 completion | open   | MVP 範囲の調整                       |
+| ID   | Decision                                                                         | Needed Before | Status   | Notes                                |
+| ---- | -------------------------------------------------------------------------------- | ------------- | -------- | ------------------------------------ |
+| D-01 | `applyRound` は invalid round に対して throw するか result object を返すか       | P1-12         | resolved | `ApplyRoundError` を throw           |
+| D-02 | `Round.id` / `Match.id` をライブラリが生成するか、アプリ側から渡せるようにするか | P1-10         | resolved | `round-{n}` / `match-{n}-{court}`    |
+| D-03 | `createdAt` をライブラリが付与するか、アプリ側の責務にするか                     | P1-10         | resolved | v1 ではアプリ側                        |
+| D-04 | `state.players` から remove された player の表示名を履歴表示でどう扱うか         | P1-03         | open     | v1 では app 側 archive でもよい      |
+| D-05 | `balanced` / `custom scorer` を Phase 1 に前倒しするか                           | P1 completion | resolved | Phase 2 に据え置き                   |
 
 ## Completion Checklist
 

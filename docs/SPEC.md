@@ -268,8 +268,14 @@ export function applyRound<ID extends PlayerId>(
 ```
 
 `applyRound` は内部で `validateRound` を呼び、invalid な round に対しては
-error result を返すか throw する（→ 未決事項 18 参照）。適用後は
-`round` が `state.rounds` に追加され、次回生成では実績として扱われる。
+`ApplyRoundError` を throw する（`errors` プロパティに `ValidationError[]` を含む）。
+適用後は `round` が `state.rounds` に追加され、次回生成では実績として扱われる。
+
+```ts
+export class ApplyRoundError<ID extends PlayerId = PlayerId> extends Error {
+  readonly errors: ValidationError<ID>[];
+}
+```
 
 ### 6.5 State 更新
 
@@ -721,13 +727,13 @@ docs/
 
 ### Phase 1 — MVP
 
-- [ ] `createSchedulerState` / `generateNextRound` / `validateRound` / `applyRound`
-- [ ] state 更新: `addPlayer` / `removePlayer` / `setCourtCount` / `setPlayerResting` / `setFixedPairs`
-- [ ] built-in strategy: `random` / `leastPlayed` / `avoidRepeatedPair`
-- [ ] `resting` / `sittingOut` の分離
-- [ ] fixed pair 対応・途中参加/離脱対応・手動編集 round の検証
-- [ ] 履歴からの統計算出 helper（`computePlayerStats` / `computePairStats`）
-- [ ] seed 指定時の deterministic generation + 基本テスト
+- [x] `createSchedulerState` / `generateNextRound` / `validateRound` / `applyRound`
+- [x] state 更新: `addPlayer` / `removePlayer` / `setCourtCount` / `setPlayerResting` / `setFixedPairs`
+- [x] built-in strategy: `random` / `leastPlayed` / `avoidRepeatedPair`
+- [x] `resting` / `sittingOut` の分離
+- [x] fixed pair 対応・途中参加/離脱対応・手動編集 round の検証
+- [x] 履歴からの統計算出 helper（`computePlayerStats` / `computePairStats`）
+- [x] seed 指定時の deterministic generation + 基本テスト
 
 ### Phase 2 — 拡張
 
@@ -765,9 +771,9 @@ docs/
 
 ### 18.2 未決事項（実装前または開発中に決める）
 
-- `applyRound` は invalid round に対して throw するか、result object を返すか。
-- `Round.id` / `Match.id` をライブラリが生成するか、アプリ側から渡せるようにするか。
-- `createdAt` をライブラリが付与するか、アプリ側の責務にするか。
+- ~~`applyRound` は invalid round に対して throw するか、result object を返すか。~~ → **throw**（`ApplyRoundError`）
+- ~~`Round.id` / `Match.id` をライブラリが生成するか、アプリ側から渡せるようにするか。~~ → **ライブラリ生成**（`round-{n}` / `match-{n}-{court}`）
+- ~~`createdAt` をライブラリが付与するか、アプリ側の責務にするか。~~ → **アプリ側**（v1 ではライブラリは付与しない）
 - `state.players` から remove された player の表示名を履歴表示でどう扱うか。
 - `balanced` / `custom scorer` を Phase 1 に前倒しするか。
 
@@ -809,3 +815,4 @@ docs/
 | 版 | 日付 | 内容 |
 | --- | --- | --- |
 | 1.0 | 2026-06-25 | SPEC1 と SPEC2 を統合した初版 |
+| 1.1 | 2026-06-25 | Phase 1 MVP 実装に合わせて applyRound / ID 生成 / createdAt の設計判断を確定 |
