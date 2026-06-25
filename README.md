@@ -9,6 +9,7 @@
 ```ts
 import {
   applyRound,
+  createScheduler,
   createSchedulerState,
   generateNextRound,
   setFixedPairs,
@@ -25,7 +26,7 @@ state = setPlayerResting(state, 6, true);
 state = setFixedPairs(state, [[1, 2]]);
 
 const proposal = generateNextRound(state, {
-  strategy: "avoidRepeatedPair",
+  strategy: "balanced",
   seed: 123,
 });
 
@@ -33,9 +34,13 @@ const validation = validateRound(state, proposal.round);
 if (validation.valid) {
   state = applyRound(state, proposal.round);
 }
+
+// optional class wrapper
+const scheduler = createScheduler(state);
+scheduler.generateNextRound({ strategy: "avoidRepeatedPair" });
 ```
 
-## 公開 API（MVP）
+## 公開 API
 
 | 関数 | 説明 |
 | --- | --- |
@@ -45,9 +50,13 @@ if (validation.valid) {
 | `applyRound` | 有効な round を履歴に適用 |
 | `addPlayer` / `removePlayer` | 途中参加・離脱 |
 | `setCourtCount` / `setPlayerResting` / `setFixedPairs` | 設定更新 |
-| `computePlayerStats` / `computePairStats` | 履歴から統計を計算 |
+| `computePlayerStats` / `computePairStats` / `computeOpponentStats` | 履歴から統計を計算 |
+| `swapPlayers` / `movePlayer` | 手動編集ヘルパー |
+| `createScheduler` | pure function の薄い class wrapper |
 
-組み込み strategy: `random` / `leastPlayed` / `avoidRepeatedPair`
+組み込み strategy: `random` / `leastPlayed` / `avoidRepeatedPair` / `avoidRepeatedOpponent` / `balanced`（デフォルト） / `custom`
+
+`custom` は `scorer` 関数の指定が必須。`balanced` は `weights` と `candidateCount` で調整可能。
 
 ## 開発
 

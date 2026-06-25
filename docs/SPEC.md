@@ -516,7 +516,7 @@ export type ScoringContext<ID extends PlayerId = PlayerId> = {
 };
 ```
 
-`custom` 指定時に `scorer` がない場合は validation error または runtime error にする。
+`custom` 指定時に `scorer` がない場合は `GenerateNextRoundError` を throw する。
 
 ---
 
@@ -554,6 +554,10 @@ export function computePlayerStats<ID extends PlayerId>(
 export function computePairStats<ID extends PlayerId>(
   state: SchedulerState<ID>
 ): ComputedPairStats<ID>[];
+
+export function computeOpponentStats<ID extends PlayerId>(
+  state: SchedulerState<ID>
+): ComputedOpponentStats<ID>[];
 ```
 
 ### 12.1 履歴キーの正規化
@@ -737,11 +741,11 @@ docs/
 
 ### Phase 2 — 拡張
 
-- [ ] built-in strategy: `avoidRepeatedOpponent` / `balanced`
-- [ ] `custom scorer` プラグイン
-- [ ] rating / wins-losses を使った実力バランス
-- [ ] 編集ヘルパー（`swapPlayers` / `movePlayer`）
-- [ ] optional class wrapper（`createScheduler`）
+- [x] built-in strategy: `avoidRepeatedOpponent` / `balanced`
+- [x] `custom scorer` プラグイン
+- [x] rating / wins-losses を使った実力バランス
+- [x] 編集ヘルパー（`swapPlayers` / `movePlayer`）
+- [x] optional class wrapper（`createScheduler`）
 
 ### Phase 3 — 任意
 
@@ -816,3 +820,4 @@ docs/
 | --- | --- | --- |
 | 1.0 | 2026-06-25 | SPEC1 と SPEC2 を統合した初版 |
 | 1.1 | 2026-06-25 | Phase 1 MVP 実装に合わせて applyRound / ID 生成 / createdAt の設計判断を確定 |
+| 1.2 | 2026-06-25 | Phase 2 拡張（balanced / avoidRepeatedOpponent / custom scorer / 編集ヘルパー / wrapper） |

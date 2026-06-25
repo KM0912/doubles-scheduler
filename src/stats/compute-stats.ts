@@ -1,4 +1,5 @@
 import type {
+  ComputedOpponentStats,
   ComputedPairStats,
   ComputedPlayerStats,
   PlayerId,
@@ -122,6 +123,33 @@ export function getPairGamesTogether<ID extends PlayerId>(
 ): number {
   const key = pairKey(pair[0], pair[1]);
   return pairStats.find((stat) => pairKey(stat.pair[0], stat.pair[1]) === key)?.gamesTogether ?? 0;
+}
+
+export function computeOpponentStats<ID extends PlayerId>(
+  state: SchedulerState<ID>,
+): ComputedOpponentStats<ID>[] {
+  const counts = new Map<string, { players: Team<ID>; gamesAgainst: number }>();
+
+  for (const round of state.rounds) {
+    for (const match of round.matches) {
+      for (const playerA of match.teamA) {
+        for (const playerB of match.teamB) {
+          const key = pairKey(playerA, playerB);
+          const existing = counts.get(key);
+          if (existing) {
+            existing.gamesAgainst += 1;
+          } else {
+            counts.set(key, {
+              players: [playerA, playerB],
+              gamesAgainst: 1,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return [...counts.values()];
 }
 
 export function getPlayerStat<ID extends PlayerId>(

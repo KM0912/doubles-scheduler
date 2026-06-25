@@ -53,12 +53,12 @@
 
 | ID    | Scope                            | SPEC        | Status | Tests / Check              | Notes                         |
 | ----- | -------------------------------- | ----------- | ------ | -------------------------- | ----------------------------- |
-| P2-01 | `avoidRepeatedOpponent` strategy | §11         | todo   | `tests/strategies.test.ts` | opponent stats が必要         |
-| P2-02 | `balanced` strategy              | §11.1       | todo   | strategy tests             | weight と複合ペナルティ       |
-| P2-03 | `custom` scorer                  | §11.2       | todo   | custom scorer tests        | scorer 未指定時の扱いを決める |
-| P2-04 | rating / wins-losses balance     | §9.2, §11.1 | todo   | strategy tests             | rating がある場合のみ         |
-| P2-05 | edit helpers                     | §13, §17    | todo   | helper tests               | `swapPlayers`, `movePlayer`   |
-| P2-06 | optional class wrapper           | §6.6        | todo   | wrapper tests              | pure functions の薄い wrapper |
+| P2-01 | `avoidRepeatedOpponent` strategy | §11         | done   | `tests/strategies.test.ts` | opponent stats + 候補スコアリング |
+| P2-02 | `balanced` strategy              | §11.1       | done   | strategy tests             | weight と複合ペナルティ、デフォルト戦略 |
+| P2-03 | `custom` scorer                  | §11.2       | done   | custom scorer tests        | scorer 未指定時は GenerateNextRoundError |
+| P2-04 | rating / wins-losses balance     | §9.2, §11.1 | done   | strategy tests             | rating 優先、なければ win rate |
+| P2-05 | edit helpers                     | §13, §17    | done   | helper tests               | `swapPlayers`, `movePlayer`   |
+| P2-06 | optional class wrapper           | §6.6        | done   | wrapper tests              | pure functions の薄い wrapper |
 
 ## Phase 3 - Optional
 

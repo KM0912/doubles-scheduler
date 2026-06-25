@@ -9,3 +9,10 @@ export class ApplyRoundError<ID extends PlayerId = PlayerId> extends Error {
     this.errors = errors;
   }
 }
+
+export class GenerateNextRoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GenerateNextRoundError";
+  }
+}
