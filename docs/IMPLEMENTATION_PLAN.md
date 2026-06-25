@@ -1,0 +1,93 @@
+# Doubles Scheduler Implementation Plan
+
+このファイルは `docs/SPEC.md` を正本として、実装を小さな単位で進めるための進捗トラッカーです。
+
+## 運用ルール
+
+- 仕様の正本は常に `docs/SPEC.md`。
+- API、型、データモデル、ビジネスルール、アルゴリズムを変更する場合は、先に `docs/SPEC.md` を更新し、必要に応じて `README.md` も同期する。
+- 各タスクは「実装」「テスト」「ドキュメント同期確認」まで終わってから `done` にする。
+- `blocked` にする場合は、理由と解消に必要な判断を `Notes` に書く。
+- 進捗は小さなコミット単位で区切る。
+
+## Status
+
+| Status    | 意味                       |
+| --------- | -------------------------- |
+| `todo`    | 未着手                     |
+| `doing`   | 作業中                     |
+| `blocked` | 判断待ち・依存待ち         |
+| `done`    | 実装・テスト・同期確認済み |
+
+## Phase 0 - Project Setup
+
+| ID    | Scope                   | SPEC | Status | Tests / Check           | Notes                        |
+| ----- | ----------------------- | ---- | ------ | ----------------------- | ---------------------------- |
+| P0-01 | npm package 初期化      | §16  | todo   | `npm test` が実行できる | package manager を決める     |
+| P0-02 | TypeScript / build 設定 | §16  | todo   | `npm run build`         | `src/index.ts` から公開      |
+| P0-03 | test runner 設定        | §19  | todo   | sample test             | Vitest などを選定            |
+| P0-04 | lint / format 方針      | §16  | todo   | lint command            | 必須にするかは最小構成で判断 |
+
+## Phase 1 - MVP
+
+| ID    | Scope                              | SPEC            | Status  | Tests / Check                | Notes                                                                             |
+| ----- | ---------------------------------- | --------------- | ------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| P1-01 | public types 定義                  | §5, §7, §14     | todo    | typecheck                    | `PlayerId`, `Round`, `SchedulerState`, error/warning types                        |
+| P1-02 | `createSchedulerState`             | §6.1            | todo    | `tests/state.test.ts`        | JSON-friendly state を返す                                                        |
+| P1-03 | state 更新 API                     | §6.5, §8.4      | todo    | `tests/state.test.ts`        | `addPlayer`, `removePlayer`, `setCourtCount`, `setPlayerResting`, `setFixedPairs` |
+| P1-04 | canonical key utilities            | §12.1           | todo    | `tests/stats.test.ts`        | pair / team / match key                                                           |
+| P1-05 | `computePlayerStats`               | §12             | todo    | `tests/stats.test.ts`        | `games`, `rests`, `sitOuts`, wins/losses                                          |
+| P1-06 | `computePairStats`                 | §12             | todo    | `tests/stats.test.ts`        | pair order normalization                                                          |
+| P1-07 | `validateRound` hard constraints   | §6.3, §9, §14   | todo    | `tests/validation.test.ts`   | manual edit flow の土台                                                           |
+| P1-08 | `selectSittingOut`                 | §8.1, §8.2      | todo    | `tests/generator.test.ts`    | games 昇順 / rests 降順 / id 昇順                                                 |
+| P1-09 | seed 対応 random utility           | §7, §11         | todo    | deterministic test           | 同じ state/options で同じ結果                                                     |
+| P1-10 | `generateNextRound` minimal random | §6.2, §10, §11  | todo    | `tests/generator.test.ts`    | 4人/8人/6人/4人未満                                                               |
+| P1-11 | fixed pair 対応                    | §9.3            | todo    | generator + validation tests | 片方だけ出場は invalid                                                            |
+| P1-12 | `applyRound`                       | §6.4, §13       | blocked | `tests/state.test.ts`        | invalid 時の扱いを §18.2 で決める                                                 |
+| P1-13 | `leastPlayed` strategy             | §11, §19.3      | todo    | `tests/strategies.test.ts`   | 出場回数が少ない player を優先                                                    |
+| P1-14 | `avoidRepeatedPair` strategy       | §11, §19.3      | todo    | `tests/strategies.test.ts`   | 未経験 pair を優先                                                                |
+| P1-15 | public exports 整理                | §16             | todo    | import smoke test            | `src/index.ts`                                                                    |
+| P1-16 | README quick start 更新            | README, §6, §15 | todo    | docs review                  | MVP API に合わせて同期                                                            |
+
+## Phase 2 - Extensions
+
+| ID    | Scope                            | SPEC        | Status | Tests / Check              | Notes                         |
+| ----- | -------------------------------- | ----------- | ------ | -------------------------- | ----------------------------- |
+| P2-01 | `avoidRepeatedOpponent` strategy | §11         | todo   | `tests/strategies.test.ts` | opponent stats が必要         |
+| P2-02 | `balanced` strategy              | §11.1       | todo   | strategy tests             | weight と複合ペナルティ       |
+| P2-03 | `custom` scorer                  | §11.2       | todo   | custom scorer tests        | scorer 未指定時の扱いを決める |
+| P2-04 | rating / wins-losses balance     | §9.2, §11.1 | todo   | strategy tests             | rating がある場合のみ         |
+| P2-05 | edit helpers                     | §13, §17    | todo   | helper tests               | `swapPlayers`, `movePlayer`   |
+| P2-06 | optional class wrapper           | §6.6        | todo   | wrapper tests              | pure functions の薄い wrapper |
+
+## Phase 3 - Optional
+
+| ID    | Scope                 | SPEC     | Status | Tests / Check       | Notes                       |
+| ----- | --------------------- | -------- | ------ | ------------------- | --------------------------- |
+| P3-01 | match result 記録 API | §15, §17 | todo   | result tests        | score / winner update       |
+| P3-02 | 複数ラウンド一括生成  | §17      | todo   | generator tests     | Phase 1/2 の安定後          |
+| P3-03 | round undo            | §17      | todo   | state tests         | 履歴操作 API                |
+| P3-04 | export/import helper  | §17      | todo   | serialization tests | state は既に JSON-friendly  |
+| P3-05 | advanced constraints  | §17      | todo   | constraint tests    | group / level / affiliation |
+
+## Open Decisions
+
+SPEC §18.2 の未決事項。決定した場合は、このファイルだけでなく `docs/SPEC.md` と必要に応じて `README.md` を更新する。
+
+| ID   | Decision                                                                         | Needed Before | Status | Notes                                |
+| ---- | -------------------------------------------------------------------------------- | ------------- | ------ | ------------------------------------ |
+| D-01 | `applyRound` は invalid round に対して throw するか result object を返すか       | P1-12         | open   | ライブラリ利用者の ergonomics に影響 |
+| D-02 | `Round.id` / `Match.id` をライブラリが生成するか、アプリ側から渡せるようにするか | P1-10         | open   | deterministic generation と関係      |
+| D-03 | `createdAt` をライブラリが付与するか、アプリ側の責務にするか                     | P1-10         | open   | pure function / 再現性と関係         |
+| D-04 | `state.players` から remove された player の表示名を履歴表示でどう扱うか         | P1-03         | open   | v1 では app 側 archive でもよい      |
+| D-05 | `balanced` / `custom scorer` を Phase 1 に前倒しするか                           | P1 completion | open   | MVP 範囲の調整                       |
+
+## Completion Checklist
+
+各タスク完了時に確認する。
+
+- 対象 SPEC 節と実装が矛盾していない。
+- 該当テストが追加または更新されている。
+- `npm test` が通る。
+- 公開 API / 型 / ルールを変えた場合、`docs/SPEC.md` と `README.md` が同期されている。
+- 進捗表の `Status` と `Notes` が更新されている。
