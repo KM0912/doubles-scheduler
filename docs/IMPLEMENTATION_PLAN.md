@@ -23,10 +23,10 @@
 
 | ID    | Scope                   | SPEC | Status | Tests / Check           | Notes                        |
 | ----- | ----------------------- | ---- | ------ | ----------------------- | ---------------------------- |
-| P0-01 | npm package 初期化      | §16  | todo   | `npm test` が実行できる | package manager を決める     |
-| P0-02 | TypeScript / build 設定 | §16  | todo   | `npm run build`         | `src/index.ts` から公開      |
-| P0-03 | test runner 設定        | §19  | todo   | sample test             | Vitest などを選定            |
-| P0-04 | lint / format 方針      | §16  | todo   | lint command            | 必須にするかは最小構成で判断 |
+| P0-01 | npm package 初期化      | §16  | done   | `npm test` が実行できる | npm                          |
+| P0-02 | TypeScript / build 設定 | §16  | done   | `npm run build`         | tsup / `src/index.ts` から公開 |
+| P0-03 | test runner 設定        | §19  | done   | sample test             | Vitest / `tests/smoke.test.ts` |
+| P0-04 | lint / format 方針      | §16  | done   | lint command            | ESLint + Prettier（最小構成） |
 
 ## Phase 1 - MVP
 
