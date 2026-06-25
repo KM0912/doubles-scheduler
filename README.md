@@ -58,6 +58,16 @@ scheduler.generateNextRound({ strategy: "balanced" });
 
 `balanced` は `weights` と `candidateCount` で調整可能。
 
+`balanced` の基本挙動:
+
+- 初期状態では入力順を優先し、例として `1,2 vs 3,4` から割り当てる。
+- 待機者は、全員同条件なら大きい ID から選ぶ。
+- 連続待機、同じペア・対戦相手、同じ出場者セットの循環をなるべく避ける。
+- 4人ちょうどでは3通りのペア/対戦パターンを偏りなく回す。
+- rating や勝敗履歴がある場合は、チーム間の強さの偏りもスコアに反映する。
+
+詳細な優先順位と例外条件は [`docs/SPEC.md`](docs/SPEC.md) を参照。
+
 ## 開発
 
 ```bash

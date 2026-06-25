@@ -31,6 +31,8 @@ import { collectGenerationWarnings } from "../validation/validate-round.js";
 import { resolveStrategy } from "../strategies/index.js";
 import {
   groupTeamsIntoMatches,
+  groupTeamsIntoMatchesInOrder,
+  pairSolosInOrder,
   pairSolosRandomly,
 } from "../strategies/pairing.js";
 import { sortPlayerIds } from "../utils/compare-players.js";
@@ -70,20 +72,31 @@ function buildFixedTeams<ID extends PlayerId>(
 function buildTeams<ID extends PlayerId>(
   solos: ID[],
   random: RandomFn,
+  ordered: boolean,
 ): Team<ID>[] {
+  if (ordered) {
+    return pairSolosInOrder(solos);
+  }
+
   return pairSolosRandomly(solos, random);
 }
 
 function groupTeams<ID extends PlayerId>(
   teams: Team<ID>[],
   random: RandomFn,
+  ordered: boolean,
 ): Team<ID>[][] {
+  if (ordered) {
+    return groupTeamsIntoMatchesInOrder(teams);
+  }
+
   return groupTeamsIntoMatches(teams, random);
 }
 
 function buildRoundCandidate<ID extends PlayerId>(
   context: BuildContext<ID>,
   random: RandomFn,
+  ordered = false,
 ): Round<ID> {
   const {
     state,
@@ -96,9 +109,9 @@ function buildRoundCandidate<ID extends PlayerId>(
   } = context;
 
   const { fixedTeams, solos } = buildFixedTeams(playingPlayerIds, fixedPairs);
-  const soloTeams = buildTeams(solos, random);
+  const soloTeams = buildTeams(solos, random, ordered);
   const allTeams = [...fixedTeams, ...soloTeams];
-  const matchTeams = groupTeams(allTeams, random).slice(0, maxMatches);
+  const matchTeams = groupTeams(allTeams, random, ordered).slice(0, maxMatches);
 
   const matches: Match<ID>[] = matchTeams.map(([teamA, teamB], index) => ({
     id: `match-${roundNumber}-${index + 1}`,
@@ -140,6 +153,10 @@ function createCandidateRandom(
   return createRandom(`${seed}:${index}`);
 }
 
+function zeroRandom(): number {
+  return 0;
+}
+
 function selectBestCandidate<ID extends PlayerId>(
   context: BuildContext<ID>,
   candidateCount: number,
@@ -155,7 +172,8 @@ function selectBestCandidate<ID extends PlayerId>(
 
   for (let index = 0; index < candidateCount; index++) {
     const candidateRandom = createCandidateRandom(seed, index);
-    const round = buildRoundCandidate(context, candidateRandom);
+    const ordered = index === 0;
+    const round = buildRoundCandidate(context, candidateRandom, ordered);
     const score = scoreRound(
       round,
       context.state,
@@ -163,7 +181,7 @@ function selectBestCandidate<ID extends PlayerId>(
       pairStats,
       opponentStats,
       weights,
-      candidateRandom,
+      ordered ? zeroRandom : candidateRandom,
     );
 
     if (score < bestScore) {

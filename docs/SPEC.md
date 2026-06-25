@@ -376,8 +376,20 @@ export type BuiltInStrategy = "balanced";
 （あぶれる人＝ sittingOut）。
 
 1. `games`（出場回数）昇順 … 試合数が少ない人を優先してプレイ
-2. `rests`（待機回数）降順 … 待機が多い人を優先してプレイ
-3. 同点時: `PlayerId` を文字列化した昇順（タイブレーク、再現性確保）
+2. 直前 round で `resting` または `sittingOut` だった人を優先してプレイ
+3. `sitOuts`（自動待機回数）降順 … 自動待機が多い人を優先してプレイ
+4. `rests`（明示休憩回数）降順 … 明示休憩が多い人を優先してプレイ
+5. 同点時: `PlayerId` を文字列化した昇順（タイブレーク、再現性確保）
+
+したがって初期状態など全員の条件が同じ場合は、小さい ID から出場し、
+大きい ID から `sittingOut` になる。例: ID `1..9`・2コートでは、
+1 round 目の `sittingOut` は `[9]`、2 round 目は `[8]`、
+3 round 目は `[7]` を基本とする。
+
+ただし、同じ出場者セットを繰り返してペアや対戦相手が偏る場合は、上記の公平性が
+同等な候補の範囲で別の `sittingOut` を選んでよい。例: 6人・1コートで
+`1,2,3,4 → 1,2,5,6 → 3,4,5,6 → 1,2,3,4 → ...` のように
+4人の出場者セットがループする場合、4 round 目以降は同じ出場者セットの再利用を避ける。
 
 ### 8.3 コート数変更
 
@@ -422,6 +434,10 @@ export type BuiltInStrategy = "balanced";
 - 試合数が少ない player を優先する。
 - 連続休憩・連続待機を避ける。
 - 連続出場を避ける（参加人数とコート数によっては許容）。
+- 初期状態では小さい ID の player を優先して出場させ、大きい ID から待機させる。
+- 履歴上まだ偏りがない player 同士は、入力順（通常は来場順）で `1,2 vs 3,4` のように配置する。
+- 同じ出場者セットのループを避ける。
+- 4人ちょうどで1コートの場合は、3ラウンド単位で3通りのペア/対戦パターンを網羅する。
 - 過去に pair になっていない player 同士を優先する。
 - 同じ対戦相手の繰り返しを避ける。
 - `rating` がある場合、team 間の rating 差が小さい match を優先する。
@@ -453,9 +469,9 @@ sequenceDiagram
   App->>Gen: state + options
   Gen->>Gen: 1. 参加可能 = players - resting
   Gen->>Gen: 2. 定員計算 = min(参加可能, courtCount*4)
-  Gen->>Gen: 3. 待機者選定 (8.2 公平性) -> sittingOut
+  Gen->>Gen: 3. 待機者選定 (8.2 公平性・連続待機回避・出場者セットループ回避) -> sittingOut
   Gen->>Gen: 4. 固定ペアを先に配置
-  Gen->>Gen: 5. 残りを balanced scoring で組み立て (candidateCount 評価)
+  Gen->>Gen: 5. 入力順候補 + ランダム候補を balanced scoring で評価 (candidateCount 評価)
   Gen->>Gen: 6. コートへ割当 (対戦履歴ペナルティ込み)
   Gen-->>App: RoundProposal (round + warnings + score)
 ```
@@ -501,6 +517,11 @@ const defaultBalancedWeights: Required<StrategyWeights> = {
 スコアは「小さいほど良いペナルティ」の重み付き合計として算出する
 （例: `partnerPenalty × w + opponentPenalty × w + fairnessPenalty × w ...`）。
 `fairnessPenalty` は今ラウンド出場者の `games` の max − min。
+
+`balanced` は各生成で、まず入力順を保った候補（例: `1,2 vs 3,4`）を評価し、
+その後 `candidateCount` に応じてランダム候補を評価する。構造的なペナルティが同じ場合は
+入力順候補を優先する。履歴上の pair / opponent の偏りや rating 差などでランダム候補の
+スコアが明確に良い場合は、入力順から外れてよい。
 
 ### 11.2 拡張 strategy の扱い
 
@@ -639,10 +660,10 @@ proposal.round;
 // {
 //   id: "round-1",
 //   matches: [
-//     { id: "match-1", court: 1, teamA: [1, 4], teamB: [2, 6] },
+//     { id: "match-1-1", court: 1, teamA: [1, 2], teamB: [3, 4] },
 //   ],
 //   restingPlayers: [],      // 明示休憩なし
-//   sittingOutPlayers: [3, 5] // 定員あぶれ
+//   sittingOutPlayers: [5, 6] // 定員あぶれ
 // }
 ```
 
@@ -791,6 +812,12 @@ docs/
 ### 19.3 戦略・統計
 
 - `balanced` は同じ seed なら同じ proposal になる。
+- `balanced` は初期状態では入力順に `1,2 vs 3,4` から割り当てる。
+- `balanced` は全員同条件の待機者選定で大きい ID から `sittingOut` にする。
+- `balanced` は 4〜16人・1〜3コートの組み合わせで valid な round を生成する。
+- `balanced` は4人ちょうどの1コートで3通りのペア/対戦パターンを3ラウンド単位で網羅する。
+- `balanced` は避けられる場合、連続 `sittingOut` を作らない。
+- `balanced` は 6人・1コート等で同じ4人の出場者セットが循環するループを避ける。
 - `balanced` は `weights` に応じて rating / win rate / pair / opponent / 出場回数の偏りをスコアに反映する。
 - 未対応 strategy 名は `GenerateNextRoundError` になる。
 - `seed` が同じなら同じ proposal になる。
@@ -808,3 +835,5 @@ docs/
 | 1.1 | 2026-06-25 | Phase 1 MVP 実装に合わせて applyRound / ID 生成 / createdAt の設計判断を確定              |
 | 1.2 | 2026-06-25 | Phase 2 拡張（balanced / avoidRepeatedOpponent / custom scorer / 編集ヘルパー / wrapper） |
 | 1.3 | 2026-06-25 | 公開 built-in strategy を `balanced` のみに限定し、追加 strategy / custom scorer を保留   |
+| 1.4 | 2026-06-25 | `balanced` の初期順割当・大きい ID からの待機・連続待機/出場者セットループ回避を明文化    |
+| 1.5 | 2026-06-25 | `balanced` の4人時ペア/対戦パターン循環テスト観点を追加                                   |
