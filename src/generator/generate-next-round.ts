@@ -3,16 +3,13 @@ import {
   computePairStats,
   computePlayerStats,
 } from "../stats/compute-stats.js";
-import { GenerateNextRoundError } from "../errors.js";
 import type {
-  BuiltInStrategy,
   GenerationWarning,
   GenerateOptions,
   Match,
   PlayerId,
   Round,
   RoundProposal,
-  RoundScorer,
   SchedulerState,
   StrategyWeights,
   Team,
@@ -31,11 +28,9 @@ import {
 } from "../state/helpers.js";
 import { selectSittingOut } from "./select-sitting-out.js";
 import { collectGenerationWarnings } from "../validation/validate-round.js";
-import { resolveStrategy, usesCandidateScoring, weightsForStrategy } from "../strategies/index.js";
+import { resolveStrategy } from "../strategies/index.js";
 import {
   groupTeamsIntoMatches,
-  pairSolosAvoidRepeatedPair,
-  pairSolosByLeastPlayed,
   pairSolosRandomly,
 } from "../strategies/pairing.js";
 import { sortPlayerIds } from "../utils/compare-players.js";
@@ -48,8 +43,6 @@ type BuildContext<ID extends PlayerId> = {
   fixedPairs: Team<ID>[];
   roundNumber: number;
   maxMatches: number;
-  strategy: BuiltInStrategy;
-  random: RandomFn;
 };
 
 function buildFixedTeams<ID extends PlayerId>(
@@ -76,37 +69,22 @@ function buildFixedTeams<ID extends PlayerId>(
 
 function buildTeams<ID extends PlayerId>(
   solos: ID[],
-  strategy: BuiltInStrategy,
-  state: SchedulerState<ID>,
   random: RandomFn,
 ): Team<ID>[] {
-  const playerStats = computePlayerStats(state);
-  const pairStats = computePairStats(state);
-
-  switch (strategy) {
-    case "leastPlayed":
-      return pairSolosByLeastPlayed(solos, playerStats);
-    case "avoidRepeatedPair":
-      return pairSolosAvoidRepeatedPair(solos, pairStats, random);
-    case "balanced":
-    case "custom":
-    case "avoidRepeatedOpponent":
-    case "random":
-    default:
-      return pairSolosRandomly(solos, random);
-  }
+  return pairSolosRandomly(solos, random);
 }
 
 function groupTeams<ID extends PlayerId>(
   teams: Team<ID>[],
-  _strategy: BuiltInStrategy,
-  _state: SchedulerState<ID>,
   random: RandomFn,
 ): Team<ID>[][] {
   return groupTeamsIntoMatches(teams, random);
 }
 
-function buildRoundCandidate<ID extends PlayerId>(context: BuildContext<ID>): Round<ID> {
+function buildRoundCandidate<ID extends PlayerId>(
+  context: BuildContext<ID>,
+  random: RandomFn,
+): Round<ID> {
   const {
     state,
     playingPlayerIds,
@@ -115,14 +93,12 @@ function buildRoundCandidate<ID extends PlayerId>(context: BuildContext<ID>): Ro
     fixedPairs,
     roundNumber,
     maxMatches,
-    strategy,
-    random,
   } = context;
 
   const { fixedTeams, solos } = buildFixedTeams(playingPlayerIds, fixedPairs);
-  const soloTeams = buildTeams(solos, strategy, state, random);
+  const soloTeams = buildTeams(solos, random);
   const allTeams = [...fixedTeams, ...soloTeams];
-  const matchTeams = groupTeams(allTeams, strategy, state, random).slice(0, maxMatches);
+  const matchTeams = groupTeams(allTeams, random).slice(0, maxMatches);
 
   const matches: Match<ID>[] = matchTeams.map(([teamA, teamB], index) => ({
     id: `match-${roundNumber}-${index + 1}`,
@@ -134,14 +110,21 @@ function buildRoundCandidate<ID extends PlayerId>(context: BuildContext<ID>): Ro
   const matchedPlayerIds = new Set<ID>(
     matches.flatMap((match) => [...match.teamA, ...match.teamB]),
   );
-  const unmatchedPlayingIds = playingPlayerIds.filter((playerId) => !matchedPlayerIds.has(playerId));
-  const allSittingOutPlayerIds = sortPlayerIds([...sittingOutPlayerIds, ...unmatchedPlayingIds]);
+  const unmatchedPlayingIds = playingPlayerIds.filter(
+    (playerId) => !matchedPlayerIds.has(playerId),
+  );
+  const allSittingOutPlayerIds = sortPlayerIds([
+    ...sittingOutPlayerIds,
+    ...unmatchedPlayingIds,
+  ]);
 
   return {
     id: `round-${roundNumber}`,
     matches,
     restingPlayers: sortPlayerIds(
-      restingPlayerIds.filter((id) => state.players.some((player) => player.id === id)),
+      restingPlayerIds.filter((id) =>
+        state.players.some((player) => player.id === id),
+      ),
     ),
     sittingOutPlayers: allSittingOutPlayerIds,
   };
@@ -162,39 +145,26 @@ function selectBestCandidate<ID extends PlayerId>(
   candidateCount: number,
   seed: string | number | undefined,
   weights: Required<StrategyWeights>,
-  scorer?: RoundScorer<ID>,
 ): { round: Round<ID>; score: number } {
   const playerStats = computePlayerStats(context.state);
   const pairStats = computePairStats(context.state);
   const opponentStats = computeOpponentStats(context.state);
-  const scoringContext = {
-    state: context.state,
-    playerStats,
-    pairStats,
-    opponentStats,
-  };
 
   let bestRound: Round<ID> | undefined;
   let bestScore = Number.POSITIVE_INFINITY;
 
   for (let index = 0; index < candidateCount; index++) {
     const candidateRandom = createCandidateRandom(seed, index);
-    const round = buildRoundCandidate({
-      ...context,
-      random: candidateRandom,
-    });
-    const score =
-      context.strategy === "custom" && scorer
-        ? scorer(round, scoringContext)
-        : scoreRound(
-            round,
-            context.state,
-            playerStats,
-            pairStats,
-            opponentStats,
-            weights,
-            candidateRandom,
-          );
+    const round = buildRoundCandidate(context, candidateRandom);
+    const score = scoreRound(
+      round,
+      context.state,
+      playerStats,
+      pairStats,
+      opponentStats,
+      weights,
+      candidateRandom,
+    );
 
     if (score < bestScore) {
       bestScore = score;
@@ -213,14 +183,12 @@ export function generateNextRound<ID extends PlayerId>(
   options?: GenerateOptions<ID>,
 ): RoundProposal<ID> {
   const warnings: GenerationWarning<ID>[] = [];
-  const strategy = resolveStrategy(options?.strategy);
+  resolveStrategy(options?.strategy);
 
-  if (strategy === "custom" && !options?.scorer) {
-    throw new GenerateNextRoundError("custom strategy requires a scorer function");
-  }
-
-  const random = createRandom(options?.seed);
-  const restingPlayerIds = getEffectiveRestingPlayerIds(state, options?.restingPlayerIds);
+  const restingPlayerIds = getEffectiveRestingPlayerIds(
+    state,
+    options?.restingPlayerIds,
+  );
   const fixedPairs = getEffectiveFixedPairs(state, options?.fixedPairs);
   const restingSet = new Set(restingPlayerIds);
   const unavailableDueToFixedPair = new Set<ID>();
@@ -232,9 +200,10 @@ export function generateNextRound<ID extends PlayerId>(
     }
   }
 
-  const availablePlayerIds = getAvailablePlayerIds(state, restingPlayerIds).filter(
-    (playerId) => !unavailableDueToFixedPair.has(playerId),
-  );
+  const availablePlayerIds = getAvailablePlayerIds(
+    state,
+    restingPlayerIds,
+  ).filter((playerId) => !unavailableDueToFixedPair.has(playerId));
   const roundNumber = state.rounds.length + 1;
 
   for (const pair of fixedPairs) {
@@ -247,7 +216,9 @@ export function generateNextRound<ID extends PlayerId>(
       continue;
     }
 
-    const availableSet = new Set(getAvailablePlayerIds(state, restingPlayerIds));
+    const availableSet = new Set(
+      getAvailablePlayerIds(state, restingPlayerIds),
+    );
     if (!isFixedPairAvailable(pair, availableSet)) {
       warnings.push({
         type: "fixedPairUnavailable",
@@ -262,7 +233,9 @@ export function generateNextRound<ID extends PlayerId>(
       id: `round-${roundNumber}`,
       matches: [],
       restingPlayers: sortPlayerIds(
-        restingPlayerIds.filter((id) => state.players.some((player) => player.id === id)),
+        restingPlayerIds.filter((id) =>
+          state.players.some((player) => player.id === id),
+        ),
       ),
       sittingOutPlayers: [],
     };
@@ -271,7 +244,11 @@ export function generateNextRound<ID extends PlayerId>(
       round,
       warnings: [
         ...warnings,
-        ...collectGenerationWarnings(round, state.courtCount, availablePlayerIds.length),
+        ...collectGenerationWarnings(
+          round,
+          state.courtCount,
+          availablePlayerIds.length,
+        ),
       ],
     };
   }
@@ -283,7 +260,10 @@ export function generateNextRound<ID extends PlayerId>(
     state.courtCount,
   );
 
-  const maxMatches = Math.min(Math.floor(playingPlayerIds.length / 4), state.courtCount);
+  const maxMatches = Math.min(
+    Math.floor(playingPlayerIds.length / 4),
+    state.courtCount,
+  );
 
   const buildContext: BuildContext<ID> = {
     state,
@@ -293,38 +273,27 @@ export function generateNextRound<ID extends PlayerId>(
     fixedPairs,
     roundNumber,
     maxMatches,
-    strategy,
-    random,
   };
 
-  if (usesCandidateScoring(strategy)) {
-    const candidateCount = options?.candidateCount ?? DEFAULT_CANDIDATE_COUNT;
-    const weights = mergeStrategyWeights(weightsForStrategy(strategy, options?.weights));
-    const { round, score } = selectBestCandidate(
-      buildContext,
-      candidateCount,
-      options?.seed,
-      weights,
-      options?.scorer,
-    );
-
-    return {
-      round,
-      score,
-      warnings: [
-        ...warnings,
-        ...collectGenerationWarnings(round, state.courtCount, availablePlayerIds.length),
-      ],
-    };
-  }
-
-  const round = buildRoundCandidate(buildContext);
+  const candidateCount = options?.candidateCount ?? DEFAULT_CANDIDATE_COUNT;
+  const weights = mergeStrategyWeights(options?.weights);
+  const { round, score } = selectBestCandidate(
+    buildContext,
+    candidateCount,
+    options?.seed,
+    weights,
+  );
 
   return {
     round,
+    score,
     warnings: [
       ...warnings,
-      ...collectGenerationWarnings(round, state.courtCount, availablePlayerIds.length),
+      ...collectGenerationWarnings(
+        round,
+        state.courtCount,
+        availablePlayerIds.length,
+      ),
     ],
   };
 }

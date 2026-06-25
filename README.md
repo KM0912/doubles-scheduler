@@ -37,26 +37,26 @@ if (validation.valid) {
 
 // optional class wrapper
 const scheduler = createScheduler(state);
-scheduler.generateNextRound({ strategy: "avoidRepeatedPair" });
+scheduler.generateNextRound({ strategy: "balanced" });
 ```
 
 ## 公開 API
 
-| 関数 | 説明 |
-| --- | --- |
-| `createSchedulerState` | 初期 state を作成 |
-| `generateNextRound` | 次ラウンド候補を生成 |
-| `validateRound` | 手動編集後の round を検証 |
-| `applyRound` | 有効な round を履歴に適用 |
-| `addPlayer` / `removePlayer` | 途中参加・離脱 |
-| `setCourtCount` / `setPlayerResting` / `setFixedPairs` | 設定更新 |
-| `computePlayerStats` / `computePairStats` / `computeOpponentStats` | 履歴から統計を計算 |
-| `swapPlayers` / `movePlayer` | 手動編集ヘルパー |
-| `createScheduler` | pure function の薄い class wrapper |
+| 関数                                                               | 説明                               |
+| ------------------------------------------------------------------ | ---------------------------------- |
+| `createSchedulerState`                                             | 初期 state を作成                  |
+| `generateNextRound`                                                | 次ラウンド候補を生成               |
+| `validateRound`                                                    | 手動編集後の round を検証          |
+| `applyRound`                                                       | 有効な round を履歴に適用          |
+| `addPlayer` / `removePlayer`                                       | 途中参加・離脱                     |
+| `setCourtCount` / `setPlayerResting` / `setFixedPairs`             | 設定更新                           |
+| `computePlayerStats` / `computePairStats` / `computeOpponentStats` | 履歴から統計を計算                 |
+| `swapPlayers` / `movePlayer`                                       | 手動編集ヘルパー                   |
+| `createScheduler`                                                  | pure function の薄い class wrapper |
 
-組み込み strategy: `random` / `leastPlayed` / `avoidRepeatedPair` / `avoidRepeatedOpponent` / `balanced`（デフォルト） / `custom`
+組み込み strategy: `balanced` のみ（デフォルト）
 
-`custom` は `scorer` 関数の指定が必須。`balanced` は `weights` と `candidateCount` で調整可能。
+`balanced` は `weights` と `candidateCount` で調整可能。
 
 ## 開発
 

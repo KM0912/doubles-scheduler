@@ -15,9 +15,14 @@ describe("createScheduler", () => {
     });
 
     scheduler.setPlayerResting(6, true);
-    const proposal = scheduler.generateNextRound({ strategy: "random", seed: 1 });
+    const proposal = scheduler.generateNextRound({
+      strategy: "balanced",
+      seed: 1,
+    });
 
-    expect(validateRound(scheduler.getState(), proposal.round).valid).toBe(true);
+    expect(validateRound(scheduler.getState(), proposal.round).valid).toBe(
+      true,
+    );
     scheduler.applyRound(proposal.round);
 
     expect(scheduler.getState().rounds).toHaveLength(1);
@@ -44,7 +49,10 @@ describe("createScheduler", () => {
     const scheduler = createScheduler(input);
     scheduler.setFixedPairs([[1, 2]]);
 
-    const proposal = scheduler.generateNextRound({ strategy: "avoidRepeatedPair", seed: 3 });
+    const proposal = scheduler.generateNextRound({
+      strategy: "balanced",
+      seed: 3,
+    });
     expect(proposal.round.matches).toHaveLength(2);
   });
 });

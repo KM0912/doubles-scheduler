@@ -6,6 +6,7 @@ import {
   swapPlayers,
   validateRound,
 } from "../src/index";
+import type { Round } from "../src/index";
 
 describe("computeOpponentStats", () => {
   it("counts cross-team opponent meetings from history", () => {
@@ -42,7 +43,7 @@ describe("computeOpponentStats", () => {
 
 describe("swapPlayers", () => {
   it("swaps two players within match teams", () => {
-    const round = {
+    const round: Round<number> = {
       id: "round-1",
       matches: [
         {
@@ -67,7 +68,7 @@ describe("swapPlayers", () => {
 
 describe("movePlayer", () => {
   it("moves a player from one match slot to another", () => {
-    const round = {
+    const round: Round<number> = {
       id: "round-1",
       matches: [
         {
@@ -87,14 +88,18 @@ describe("movePlayer", () => {
       sittingOutPlayers: [],
     };
 
-    const edited = movePlayer(round, 1, { matchId: "match-2", team: "teamB", slot: 0 });
+    const edited = movePlayer(round, 1, {
+      matchId: "match-2",
+      team: "teamB",
+      slot: 0,
+    });
 
     expect(edited.matches[0]?.teamA).toEqual([7, 2]);
     expect(edited.matches[1]?.teamB).toEqual([1, 8]);
   });
 
   it("moves a sitting-out player into a match slot", () => {
-    const round = {
+    const round: Round<number> = {
       id: "round-1",
       matches: [
         {
@@ -108,7 +113,11 @@ describe("movePlayer", () => {
       sittingOutPlayers: [5],
     };
 
-    const edited = movePlayer(round, 5, { matchId: "match-1", team: "teamA", slot: 0 });
+    const edited = movePlayer(round, 5, {
+      matchId: "match-1",
+      team: "teamA",
+      slot: 0,
+    });
 
     expect(edited.matches[0]?.teamA).toEqual([5, 2]);
     expect(edited.sittingOutPlayers).toEqual([1]);
@@ -120,7 +129,7 @@ describe("movePlayer", () => {
       courtCount: 2,
     });
 
-    const round = {
+    const round: Round<number> = {
       id: "round-1",
       matches: [
         {

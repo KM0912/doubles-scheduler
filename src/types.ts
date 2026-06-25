@@ -70,7 +70,11 @@ export type ValidationResult<ID extends PlayerId = PlayerId> = {
 };
 
 export type ValidationWarning<ID extends PlayerId = PlayerId> =
-  | { type: "roundRestingPlayersMismatch"; expectedPlayerIds: ID[]; actualPlayerIds: ID[] }
+  | {
+      type: "roundRestingPlayersMismatch";
+      expectedPlayerIds: ID[];
+      actualPlayerIds: ID[];
+    }
   | { type: "unusedCourt"; court: number }
   | { type: "softConstraintViolation"; message: string };
 
@@ -99,17 +103,10 @@ export type GenerateOptions<ID extends PlayerId = PlayerId> = {
   restingPlayerIds?: ID[];
   seed?: string | number;
   weights?: StrategyWeights;
-  scorer?: RoundScorer<ID>;
   candidateCount?: number;
 };
 
-export type BuiltInStrategy =
-  | "random"
-  | "leastPlayed"
-  | "avoidRepeatedPair"
-  | "avoidRepeatedOpponent"
-  | "balanced"
-  | "custom";
+export type BuiltInStrategy = "balanced";
 
 export type StrategyWeights = {
   balanceGames?: number;
@@ -119,18 +116,6 @@ export type StrategyWeights = {
   avoidConsecutivePlay?: number;
   balanceRating?: number;
   randomness?: number;
-};
-
-export type RoundScorer<ID extends PlayerId = PlayerId> = (
-  candidate: Round<ID>,
-  context: ScoringContext<ID>,
-) => number;
-
-export type ScoringContext<ID extends PlayerId = PlayerId> = {
-  state: SchedulerState<ID>;
-  playerStats: ComputedPlayerStats<ID>[];
-  pairStats: ComputedPairStats<ID>[];
-  opponentStats: ComputedOpponentStats<ID>[];
 };
 
 export type ComputedPlayerStats<ID extends PlayerId = PlayerId> = {
