@@ -25,7 +25,9 @@ export const DEFAULT_STRATEGY_WEIGHTS: Required<StrategyWeights> = {
 
 export const DEFAULT_CANDIDATE_COUNT = 8;
 
-export function mergeStrategyWeights(weights?: StrategyWeights): Required<StrategyWeights> {
+export function mergeStrategyWeights(
+  weights?: StrategyWeights,
+): Required<StrategyWeights> {
   return {
     ...DEFAULT_STRATEGY_WEIGHTS,
     ...weights,
@@ -38,8 +40,9 @@ export function getOpponentGamesAgainst<ID extends PlayerId>(
 ): number {
   const key = pairKey(players[0], players[1]);
   return (
-    opponentStats.find((stat) => pairKey(stat.players[0], stat.players[1]) === key)
-      ?.gamesAgainst ?? 0
+    opponentStats.find(
+      (stat) => pairKey(stat.players[0], stat.players[1]) === key,
+    )?.gamesAgainst ?? 0
   );
 }
 
@@ -60,7 +63,9 @@ function getTeamStrength<ID extends PlayerId>(
     return undefined;
   }
 
-  const ratings = members.map((player) => player.rating).filter((rating) => rating !== undefined);
+  const ratings = members
+    .map((player) => player.rating)
+    .filter((rating) => rating !== undefined);
 
   if (ratings.length === team.length) {
     return ratings.reduce((sum, rating) => sum + rating, 0) / team.length;
@@ -116,7 +121,10 @@ export function scoreRound<ID extends PlayerId>(
     for (const match of round.matches) {
       for (const playerA of match.teamA) {
         for (const playerB of match.teamB) {
-          opponentPenalty += getOpponentGamesAgainst(opponentStats, [playerA, playerB]);
+          opponentPenalty += getOpponentGamesAgainst(opponentStats, [
+            playerA,
+            playerB,
+          ]);
         }
       }
     }
@@ -127,7 +135,10 @@ export function scoreRound<ID extends PlayerId>(
 
   if (lastRoundId && weights.avoidConsecutiveRest > 0) {
     let consecutiveRestPenalty = 0;
-    for (const playerId of [...round.restingPlayers, ...round.sittingOutPlayers]) {
+    for (const playerId of [
+      ...round.restingPlayers,
+      ...round.sittingOutPlayers,
+    ]) {
       const stats = getPlayerStat(playerStats, playerId);
       if (stats.lastRoundPlayed !== lastRoundId) {
         consecutiveRestPenalty += 1;
@@ -150,8 +161,16 @@ export function scoreRound<ID extends PlayerId>(
   if (weights.balanceRating > 0) {
     let ratingPenalty = 0;
     for (const match of round.matches) {
-      const teamAStrength = getTeamStrength(match.teamA, state.players, playerStats);
-      const teamBStrength = getTeamStrength(match.teamB, state.players, playerStats);
+      const teamAStrength = getTeamStrength(
+        match.teamA,
+        state.players,
+        playerStats,
+      );
+      const teamBStrength = getTeamStrength(
+        match.teamB,
+        state.players,
+        playerStats,
+      );
       if (teamAStrength !== undefined && teamBStrength !== undefined) {
         ratingPenalty += Math.abs(teamAStrength - teamBStrength);
       }

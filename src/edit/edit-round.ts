@@ -81,7 +81,9 @@ export function movePlayer<ID extends PlayerId>(
 ): Round<ID> {
   const nextRound = cloneRound(round);
   const sourceSlot = findPlayerSlot(nextRound, playerId);
-  const targetMatchIndex = nextRound.matches.findIndex((match) => match.id === target.matchId);
+  const targetMatchIndex = nextRound.matches.findIndex(
+    (match) => match.id === target.matchId,
+  );
 
   if (targetMatchIndex === -1) {
     return round;

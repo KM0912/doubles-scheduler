@@ -400,3 +400,40 @@ npm run typecheck
 npm run lint
 npm run build
 ```
+
+## リリース
+
+npm への公開には、公開権限を持つ npm アカウントと2要素認証（2FA）が必要です。最初にログイン状態を確認します。
+
+```bash
+npm whoami
+```
+
+リリース内容に応じて SemVer の `patch`、`minor`、`major` のいずれかを選び、`package.json` と `package-lock.json` のバージョンを更新します。
+
+```bash
+npm version patch --no-git-tag-version
+```
+
+公開 API、型、ルール、アルゴリズムを変更した場合は、同じ変更単位で先に `docs/SPEC.md`、続いて `README.md` を更新してください。その後、すべての品質チェックとビルドを実行します。
+
+```bash
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+公開対象のファイルとパッケージ情報を確認してから公開します。一度公開したバージョン番号は再利用できません。
+
+```bash
+npm pack --dry-run
+npm publish --access public
+```
+
+公開後、バージョンと `latest` タグが意図どおりか確認します。
+
+```bash
+npm view doubles-scheduler version dist-tags.latest
+```

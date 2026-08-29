@@ -44,7 +44,10 @@ export function validateRound<ID extends PlayerId>(
 
   const conflictingPlayerId = fixedPairsConflict(fixedPairs);
   if (conflictingPlayerId !== undefined) {
-    errors.push({ type: "conflictingFixedPairs", playerId: conflictingPlayerId });
+    errors.push({
+      type: "conflictingFixedPairs",
+      playerId: conflictingPlayerId,
+    });
   }
 
   const expectedResting = sortPlayerIds(
@@ -106,7 +109,13 @@ export function validateRound<ID extends PlayerId>(
     }
   }
 
-  validateFixedPairsInRound(round, fixedPairs, activePlayerIds, restingSet, errors);
+  validateFixedPairsInRound(
+    round,
+    fixedPairs,
+    activePlayerIds,
+    restingSet,
+    errors,
+  );
 
   return {
     valid: errors.length === 0,

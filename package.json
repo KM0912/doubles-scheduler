@@ -1,9 +1,24 @@
 {
   "name": "doubles-scheduler",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Generate next-round court assignments for social doubles racket sports",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KM0912/doubles-scheduler.git"
+  },
+  "homepage": "https://github.com/KM0912/doubles-scheduler#readme",
+  "bugs": {
+    "url": "https://github.com/KM0912/doubles-scheduler/issues"
+  },
+  "keywords": [
+    "doubles",
+    "scheduler",
+    "racket-sports",
+    "matchmaking",
+    "typescript"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +37,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",

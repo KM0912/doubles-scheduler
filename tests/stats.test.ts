@@ -56,14 +56,22 @@ describe("computePlayerStats", () => {
     const stats = computePlayerStats(state);
     const byId = Object.fromEntries(stats.map((stat) => [stat.playerId, stat]));
 
-    expect(byId[1]).toMatchObject({ games: 1, rests: 0, sitOuts: 1, wins: 1, losses: 0 });
+    expect(byId[1]).toMatchObject({
+      games: 1,
+      rests: 0,
+      sitOuts: 1,
+      wins: 1,
+      losses: 0,
+    });
     expect(byId[3]).toMatchObject({ games: 1, wins: 0, losses: 1 });
     expect(byId[5]).toMatchObject({ games: 0, rests: 1, sitOuts: 1 });
   });
 
   it("starts from seed stats for mid-session joiners", () => {
     const state = createSchedulerState({
-      players: [{ id: "new", stats: { games: 2, rests: 1, wins: 1, losses: 1 } }],
+      players: [
+        { id: "new", stats: { games: 2, rests: 1, wins: 1, losses: 1 } },
+      ],
       courtCount: 1,
     });
 
@@ -78,7 +86,14 @@ describe("computePlayerStats", () => {
 
   it("updates after applyRound", () => {
     let state = createSchedulerState({
-      players: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }],
+      players: [
+        { id: 1 },
+        { id: 2 },
+        { id: 3 },
+        { id: 4 },
+        { id: 5 },
+        { id: 6 },
+      ],
       courtCount: 1,
     });
     state = applyRound(state, generateNextRound(state, { seed: 42 }).round);
@@ -131,36 +146,33 @@ describe("selectSittingOut fairness via generation", () => {
       courtCount: 2,
     });
 
-    state = applyRound(
-      state,
-      {
-        id: "round-1",
-        matches: [
-          {
-            id: "match-1",
-            court: 1,
-            teamA: [1, 2],
-            teamB: [3, 4],
-          },
-        ],
-        restingPlayers: [],
-        sittingOutPlayers: [5, 6, 7, 8, 9],
-      },
-    );
+    state = applyRound(state, {
+      id: "round-1",
+      matches: [
+        {
+          id: "match-1",
+          court: 1,
+          teamA: [1, 2],
+          teamB: [3, 4],
+        },
+      ],
+      restingPlayers: [],
+      sittingOutPlayers: [5, 6, 7, 8, 9],
+    });
 
-    state = applyRound(
-      state,
-      {
-        id: "round-2",
-        matches: [],
-        restingPlayers: [],
-        sittingOutPlayers: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-      },
-    );
+    state = applyRound(state, {
+      id: "round-2",
+      matches: [],
+      restingPlayers: [],
+      sittingOutPlayers: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    });
 
     const proposal = generateNextRound(state, { seed: 1 });
     const playing = new Set(
-      proposal.round.matches.flatMap((match) => [...match.teamA, ...match.teamB]),
+      proposal.round.matches.flatMap((match) => [
+        ...match.teamA,
+        ...match.teamB,
+      ]),
     );
 
     expect(playing.size).toBe(8);

@@ -1,5 +1,11 @@
 import { ApplyRoundError } from "../errors.js";
-import type { Player, PlayerId, Round, SchedulerState, Team } from "../types.js";
+import type {
+  Player,
+  PlayerId,
+  Round,
+  SchedulerState,
+  Team,
+} from "../types.js";
 import { validateRound } from "../validation/validate-round.js";
 import { removePlayerFromFixedPairs } from "./helpers.js";
 

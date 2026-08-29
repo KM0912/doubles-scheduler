@@ -34,7 +34,9 @@ describe("validateRound", () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors.some((error) => error.type === "duplicatePlayer")).toBe(true);
+    expect(
+      result.errors.some((error) => error.type === "duplicatePlayer"),
+    ).toBe(true);
   });
 
   it("rejects unknown players", () => {
@@ -52,7 +54,9 @@ describe("validateRound", () => {
       sittingOutPlayers: [4],
     });
 
-    expect(result.errors.some((error) => error.type === "unknownPlayer")).toBe(true);
+    expect(result.errors.some((error) => error.type === "unknownPlayer")).toBe(
+      true,
+    );
   });
 
   it("rejects resting players on court", () => {
@@ -70,7 +74,9 @@ describe("validateRound", () => {
       sittingOutPlayers: [4],
     });
 
-    expect(result.errors.some((error) => error.type === "restingPlayerIncluded")).toBe(true);
+    expect(
+      result.errors.some((error) => error.type === "restingPlayerIncluded"),
+    ).toBe(true);
   });
 
   it("rejects resting players in sittingOut", () => {
@@ -88,7 +94,9 @@ describe("validateRound", () => {
       sittingOutPlayers: [5],
     });
 
-    expect(result.errors.some((error) => error.type === "restingPlayerInSittingOut")).toBe(true);
+    expect(
+      result.errors.some((error) => error.type === "restingPlayerInSittingOut"),
+    ).toBe(true);
   });
 
   it("rejects broken fixed pairs", () => {
@@ -106,7 +114,9 @@ describe("validateRound", () => {
       sittingOutPlayers: [],
     });
 
-    expect(result.errors.some((error) => error.type === "fixedPairBroken")).toBe(true);
+    expect(
+      result.errors.some((error) => error.type === "fixedPairBroken"),
+    ).toBe(true);
   });
 
   it("rejects conflicting fixed pairs in state", () => {
@@ -126,6 +136,8 @@ describe("validateRound", () => {
       sittingOutPlayers: [1, 2, 3],
     });
 
-    expect(result.errors.some((error) => error.type === "conflictingFixedPairs")).toBe(true);
+    expect(
+      result.errors.some((error) => error.type === "conflictingFixedPairs"),
+    ).toBe(true);
   });
 });

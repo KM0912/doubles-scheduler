@@ -119,7 +119,10 @@ describe("removed player history", () => {
 
     expect(state.players.map((player) => player.id)).toEqual([1, 2, 3]);
     const matchPlayers = state.rounds[0]?.matches[0];
-    const allPlayersInMatch = [...(matchPlayers?.teamA ?? []), ...(matchPlayers?.teamB ?? [])];
+    const allPlayersInMatch = [
+      ...(matchPlayers?.teamA ?? []),
+      ...(matchPlayers?.teamB ?? []),
+    ];
     expect(allPlayersInMatch).toContain(4);
   });
 });

@@ -8,7 +8,9 @@ import type {
 } from "../types.js";
 import { pairKey } from "../utils/pair-key.js";
 
-function createEmptyStats<ID extends PlayerId>(playerId: ID): ComputedPlayerStats<ID> {
+function createEmptyStats<ID extends PlayerId>(
+  playerId: ID,
+): ComputedPlayerStats<ID> {
   return {
     playerId,
     games: 0,
@@ -70,8 +72,10 @@ export function computePlayerStats<ID extends PlayerId>(
         continue;
       }
 
-      const winners = match.result.winner === "teamA" ? match.teamA : match.teamB;
-      const losers = match.result.winner === "teamA" ? match.teamB : match.teamA;
+      const winners =
+        match.result.winner === "teamA" ? match.teamA : match.teamB;
+      const losers =
+        match.result.winner === "teamA" ? match.teamB : match.teamA;
 
       for (const playerId of winners) {
         const stats = statsById.get(playerId);
@@ -122,7 +126,10 @@ export function getPairGamesTogether<ID extends PlayerId>(
   pair: Team<ID>,
 ): number {
   const key = pairKey(pair[0], pair[1]);
-  return pairStats.find((stat) => pairKey(stat.pair[0], stat.pair[1]) === key)?.gamesTogether ?? 0;
+  return (
+    pairStats.find((stat) => pairKey(stat.pair[0], stat.pair[1]) === key)
+      ?.gamesTogether ?? 0
+  );
 }
 
 export function computeOpponentStats<ID extends PlayerId>(
