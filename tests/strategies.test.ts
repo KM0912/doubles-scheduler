@@ -37,6 +37,46 @@ function matchupKey(round: Round<number>) {
   return [teamA, teamB].sort().join("|");
 }
 
+function summarizeOverlap(rounds: Round<number>[]) {
+  const partners = new Map<string, number>();
+  const opponents = new Map<string, number>();
+  const foursomes = new Set<string>();
+  let foursomeRepeats = 0;
+
+  const key = (left: number, right: number) =>
+    left < right ? `${left}:${right}` : `${right}:${left}`;
+  const bump = (counts: Map<string, number>, id: string) => {
+    const next = (counts.get(id) ?? 0) + 1;
+    counts.set(id, next);
+    return next;
+  };
+
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      const foursome = [...match.teamA, ...match.teamB]
+        .sort((left, right) => left - right)
+        .join(":");
+      if (foursomes.has(foursome)) {
+        foursomeRepeats += 1;
+      }
+      foursomes.add(foursome);
+      bump(partners, key(match.teamA[0], match.teamA[1]));
+      bump(partners, key(match.teamB[0], match.teamB[1]));
+      for (const playerA of match.teamA) {
+        for (const playerB of match.teamB) {
+          bump(opponents, key(playerA, playerB));
+        }
+      }
+    }
+  }
+
+  return {
+    pairMax: Math.max(0, ...partners.values()),
+    opponentMax: Math.max(0, ...opponents.values()),
+    foursomeRepeats,
+  };
+}
+
 function expectCompleteFourPlayerRotation(matchupKeys: string[]) {
   for (let index = 0; index < matchupKeys.length; index += 3) {
     expect([...matchupKeys.slice(index, index + 3)].sort()).toEqual(
@@ -298,6 +338,34 @@ describe("balanced strategy", () => {
 
     expect(Math.max(...games) - Math.min(...games)).toBeLessThanOrEqual(1);
     expect(Math.max(...sitOuts) - Math.min(...sitOuts)).toBeLessThanOrEqual(1);
+  });
+
+  it("keeps court groups and opponents spread for 13 players on 3 courts", () => {
+    for (const seed of [1, 2, 3, 4]) {
+      let state = createSchedulerState({
+        players: createNumberedPlayers(13),
+        courtCount: 3,
+      });
+      const rounds: Round<number>[] = [];
+
+      for (let roundIndex = 0; roundIndex < 11; roundIndex += 1) {
+        const round = generateNextRound(state, {
+          strategy: "balanced",
+          seed: `spread-13-3-${seed}-${roundIndex}`,
+        }).round;
+        rounds.push(round);
+        state = applyRound(state, round);
+      }
+
+      const early = summarizeOverlap(rounds.slice(0, 6));
+      const full = summarizeOverlap(rounds);
+
+      expect(early.opponentMax).toBeLessThanOrEqual(2);
+      expect(early.foursomeRepeats).toBe(0);
+      expect(full.foursomeRepeats).toBe(0);
+      expect(full.opponentMax).toBeLessThanOrEqual(2);
+      expect(full.pairMax).toBeLessThanOrEqual(2);
+    }
   });
 
   it("prioritizes new partners when repeated pairs can be avoided", () => {

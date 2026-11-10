@@ -112,6 +112,7 @@ export type StrategyWeights = {
   balanceGames?: number;
   avoidRepeatedPair?: number;
   avoidRepeatedOpponent?: number;
+  avoidRepeatedCourtGroup?: number;
   avoidConsecutiveRest?: number;
   avoidConsecutivePlay?: number;
   balanceRating?: number;

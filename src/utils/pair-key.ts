@@ -2,6 +2,10 @@ import type { PlayerId, Team } from "../types.js";
 import { comparePlayerIds } from "./compare-players.js";
 
 export function pairKey(a: PlayerId, b: PlayerId): string {
+  if (typeof a === "number" && typeof b === "number") {
+    return a < b ? `${a}:${b}` : `${b}:${a}`;
+  }
+
   return [String(a), String(b)].sort(comparePlayerIds).join(":");
 }
 

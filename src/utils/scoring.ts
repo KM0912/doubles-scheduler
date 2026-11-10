@@ -1,6 +1,4 @@
 import type {
-  ComputedOpponentStats,
-  ComputedPairStats,
   ComputedPlayerStats,
   Player,
   PlayerId,
@@ -9,14 +7,16 @@ import type {
   StrategyWeights,
   Team,
 } from "../types.js";
-import { getPairGamesTogether, getPlayerStat } from "../stats/compute-stats.js";
+import { getPlayerStat } from "../stats/compute-stats.js";
+import { courtGroupUnits, type HistoryIndex } from "./history-index.js";
 import { pairKey } from "./pair-key.js";
 import type { RandomFn } from "./random.js";
 
 export const DEFAULT_STRATEGY_WEIGHTS: Required<StrategyWeights> = {
   balanceGames: 8,
   avoidRepeatedPair: 10,
-  avoidRepeatedOpponent: 4,
+  avoidRepeatedOpponent: 6,
+  avoidRepeatedCourtGroup: 12,
   avoidConsecutiveRest: 6,
   avoidConsecutivePlay: 2,
   balanceRating: 5,
@@ -25,6 +25,14 @@ export const DEFAULT_STRATEGY_WEIGHTS: Required<StrategyWeights> = {
 
 export const DEFAULT_CANDIDATE_COUNT = 8;
 
+export function opponentRepeatUnits(gamesAgainst: number): number {
+  if (gamesAgainst <= 1) {
+    return gamesAgainst;
+  }
+
+  return gamesAgainst * 8;
+}
+
 export function mergeStrategyWeights(
   weights?: StrategyWeights,
 ): Required<StrategyWeights> {
@@ -32,18 +40,6 @@ export function mergeStrategyWeights(
     ...DEFAULT_STRATEGY_WEIGHTS,
     ...weights,
   };
-}
-
-export function getOpponentGamesAgainst<ID extends PlayerId>(
-  opponentStats: ComputedOpponentStats<ID>[],
-  players: Team<ID>,
-): number {
-  const key = pairKey(players[0], players[1]);
-  return (
-    opponentStats.find(
-      (stat) => pairKey(stat.players[0], stat.players[1]) === key,
-    )?.gamesAgainst ?? 0
-  );
 }
 
 function getPlayingPlayerIds<ID extends PlayerId>(round: Round<ID>): ID[] {
@@ -89,46 +85,81 @@ function getTeamStrength<ID extends PlayerId>(
   );
 }
 
-export function scoreRound<ID extends PlayerId>(
-  round: Round<ID>,
+export function scoreMatches<ID extends PlayerId>(
+  matches: Team<ID>[][],
   state: SchedulerState<ID>,
   playerStats: ComputedPlayerStats<ID>[],
-  pairStats: ComputedPairStats<ID>[],
-  opponentStats: ComputedOpponentStats<ID>[],
+  history: HistoryIndex,
   weights: Required<StrategyWeights>,
-  random: RandomFn,
 ): number {
-  const playingIds = getPlayingPlayerIds(round);
   let score = 0;
-
-  if (playingIds.length > 0 && weights.balanceGames > 0) {
-    const games = playingIds.map((id) => getPlayerStat(playerStats, id).games);
-    score += weights.balanceGames * (Math.max(...games) - Math.min(...games));
-  }
 
   if (weights.avoidRepeatedPair > 0) {
     let pairPenalty = 0;
-    for (const match of round.matches) {
-      for (const team of [match.teamA, match.teamB]) {
-        pairPenalty += getPairGamesTogether(pairStats, team);
-      }
+    for (const [teamA, teamB] of matches) {
+      pairPenalty += history.pairCounts.get(pairKey(teamA[0], teamA[1])) ?? 0;
+      pairPenalty += history.pairCounts.get(pairKey(teamB[0], teamB[1])) ?? 0;
     }
     score += weights.avoidRepeatedPair * pairPenalty;
   }
 
   if (weights.avoidRepeatedOpponent > 0) {
     let opponentPenalty = 0;
-    for (const match of round.matches) {
-      for (const playerA of match.teamA) {
-        for (const playerB of match.teamB) {
-          opponentPenalty += getOpponentGamesAgainst(opponentStats, [
-            playerA,
-            playerB,
-          ]);
+    for (const [teamA, teamB] of matches) {
+      for (const playerA of teamA) {
+        for (const playerB of teamB) {
+          opponentPenalty += opponentRepeatUnits(
+            history.opponentCounts.get(pairKey(playerA, playerB)) ?? 0,
+          );
         }
       }
     }
     score += weights.avoidRepeatedOpponent * opponentPenalty;
+  }
+
+  if (weights.avoidRepeatedCourtGroup > 0) {
+    let courtGroupPenalty = 0;
+    for (const [teamA, teamB] of matches) {
+      courtGroupPenalty += courtGroupUnits(teamA, teamB, history);
+    }
+    score += weights.avoidRepeatedCourtGroup * courtGroupPenalty;
+  }
+
+  if (weights.balanceRating > 0) {
+    let ratingPenalty = 0;
+    for (const [teamA, teamB] of matches) {
+      const teamAStrength = getTeamStrength(teamA, state.players, playerStats);
+      const teamBStrength = getTeamStrength(teamB, state.players, playerStats);
+      if (teamAStrength !== undefined && teamBStrength !== undefined) {
+        ratingPenalty += Math.abs(teamAStrength - teamBStrength);
+      }
+    }
+    score += weights.balanceRating * ratingPenalty;
+  }
+
+  return score;
+}
+
+export function scoreRound<ID extends PlayerId>(
+  round: Round<ID>,
+  state: SchedulerState<ID>,
+  playerStats: ComputedPlayerStats<ID>[],
+  history: HistoryIndex,
+  weights: Required<StrategyWeights>,
+  random: RandomFn,
+): number {
+  const playingIds = getPlayingPlayerIds(round);
+  let score = scoreMatches(
+    round.matches.map((match) => [match.teamA, match.teamB]),
+    state,
+    playerStats,
+    history,
+    weights,
+  );
+
+  if (playingIds.length > 0 && weights.balanceGames > 0) {
+    const games = playingIds.map((id) => getPlayerStat(playerStats, id).games);
+    score += weights.balanceGames * (Math.max(...games) - Math.min(...games));
   }
 
   const lastRoundId = state.rounds.at(-1)?.id;
@@ -156,26 +187,6 @@ export function scoreRound<ID extends PlayerId>(
       }
     }
     score += weights.avoidConsecutivePlay * consecutivePlayPenalty;
-  }
-
-  if (weights.balanceRating > 0) {
-    let ratingPenalty = 0;
-    for (const match of round.matches) {
-      const teamAStrength = getTeamStrength(
-        match.teamA,
-        state.players,
-        playerStats,
-      );
-      const teamBStrength = getTeamStrength(
-        match.teamB,
-        state.players,
-        playerStats,
-      );
-      if (teamAStrength !== undefined && teamBStrength !== undefined) {
-        ratingPenalty += Math.abs(teamAStrength - teamBStrength);
-      }
-    }
-    score += weights.balanceRating * ratingPenalty;
   }
 
   if (weights.randomness > 0) {

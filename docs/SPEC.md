@@ -440,6 +440,8 @@ export type BuiltInStrategy = "balanced";
 - 4人ちょうどで1コートの場合は、3ラウンド単位で3通りのペア/対戦パターンを網羅する。
 - 過去に pair になっていない player 同士を優先する。
 - 同じ対戦相手の繰り返しを避ける。
+- 同じ4人が再び同じコートに入ることを避ける。
+- 同じ3人が再び同じコートに入ることを避ける。
 - `rating` がある場合、team 間の rating 差が小さい match を優先する。
 - `wins` / `losses` がある場合、強さが偏りすぎない match を優先する。
 - 完全固定になりすぎないよう、必要に応じて randomness を入れる。
@@ -471,8 +473,8 @@ sequenceDiagram
   Gen->>Gen: 2. 定員計算 = min(参加可能, courtCount*4)
   Gen->>Gen: 3. 待機者選定 (8.2 公平性・連続待機回避・出場者セットループ回避) -> sittingOut
   Gen->>Gen: 4. 固定ペアを先に配置
-  Gen->>Gen: 5. 入力順候補 + ランダム候補を balanced scoring で評価 (candidateCount 評価)
-  Gen->>Gen: 6. コートへ割当 (対戦履歴ペナルティ込み)
+  Gen->>Gen: 5. 入力順・貪欲・ランダム候補を作り、スコアが下がる入れ替えで改善
+  Gen->>Gen: 6. ペア・対戦・コート仲間の履歴ペナルティで最良候補を選ぶ
   Gen-->>App: RoundProposal (round + warnings + score)
 ```
 
@@ -497,6 +499,7 @@ export type StrategyWeights = {
   balanceGames?: number;
   avoidRepeatedPair?: number;
   avoidRepeatedOpponent?: number;
+  avoidRepeatedCourtGroup?: number;
   avoidConsecutiveRest?: number;
   avoidConsecutivePlay?: number;
   balanceRating?: number;
@@ -506,7 +509,8 @@ export type StrategyWeights = {
 const defaultBalancedWeights: Required<StrategyWeights> = {
   balanceGames: 8,
   avoidRepeatedPair: 10,
-  avoidRepeatedOpponent: 4,
+  avoidRepeatedOpponent: 6,
+  avoidRepeatedCourtGroup: 12,
   avoidConsecutiveRest: 6,
   avoidConsecutivePlay: 2,
   balanceRating: 5,
@@ -518,10 +522,11 @@ const defaultBalancedWeights: Required<StrategyWeights> = {
 （例: `partnerPenalty × w + opponentPenalty × w + fairnessPenalty × w ...`）。
 `fairnessPenalty` は今ラウンド出場者の `games` の max − min。
 
-`balanced` は各生成で、まず入力順を保った候補（例: `1,2 vs 3,4`）を評価し、
-その後 `candidateCount` に応じてランダム候補を評価する。構造的なペナルティが同じ場合は
-入力順候補を優先する。履歴上の pair / opponent の偏りや rating 差などでランダム候補の
-スコアが明確に良い場合は、入力順から外れてよい。
+`avoidRepeatedOpponent` は、初回の再戦なら過去回数 1、それ以降は過去回数 × 8 に掛ける。既定の重み 6 では、対戦エッジ 2 本の初回再戦（12）がペア 1 組の再登場（10）より高く、3 回目の対戦（96）はペアを数組繰り返してでも避ける。初回の再戦 1 本（6）は、ペアを新規に保つ方を優先する。
+
+`avoidRepeatedCourtGroup` は、その 4 人が過去に同じコートへ入った回数を 4 倍し、4 人からできる各 3 人組の過去回数を足した値に掛ける。同じ 4 人の再出場は、ペアだけを組み替えてもこのペナルティが残る。
+
+`balanced` は各生成で、入力順候補（例: `1,2 vs 3,4`）をまず評価する。出場が 12 人以下かつ 3 コート以下のときは、4 人組の分け方をすべて調べ、各コートでペアの組み方を選ぶ。それより大きいラウンドは、まだペアになっていない組を優先する貪欲候補とランダム候補を `candidateCount` 件まで作り、固定ペアを崩さない範囲でスコアが下がる入れ替え（player 交換、コート間の team 交換、同じ 4 人の組み替え）だけを採用する。構造ペナルティが同じ場合は入力順候補を優先する（入力順候補の randomness は 0）。履歴上の pair / opponent / コート仲間の偏りや rating 差で他候補のスコアが明確に良い場合は、入力順から外れてよい。
 
 ### 11.2 拡張 strategy の扱い
 
@@ -818,7 +823,8 @@ docs/
 - `balanced` は4人ちょうどの1コートで3通りのペア/対戦パターンを3ラウンド単位で網羅する。
 - `balanced` は避けられる場合、連続 `sittingOut` を作らない。
 - `balanced` は 6人・1コート等で同じ4人の出場者セットが循環するループを避ける。
-- `balanced` は `weights` に応じて rating / win rate / pair / opponent / 出場回数の偏りをスコアに反映する。
+- `balanced` は `weights` に応じて rating / win rate / pair / opponent / コート仲間 / 出場回数の偏りをスコアに反映する。
+- `balanced` は 13人・3コートで、約10試合のあいだ同じ4人組の再出場を避け、対戦回数の最大を抑える。
 - 未対応 strategy 名は `GenerateNextRoundError` になる。
 - `seed` が同じなら同じ proposal になる。
 - `applyRound` 後に計算統計が更新される（履歴ベース）。
@@ -837,3 +843,4 @@ docs/
 | 1.3 | 2026-06-25 | 公開 built-in strategy を `balanced` のみに限定し、追加 strategy / custom scorer を保留   |
 | 1.4 | 2026-06-25 | `balanced` の初期順割当・大きい ID からの待機・連続待機/出場者セットループ回避を明文化    |
 | 1.5 | 2026-06-25 | `balanced` の4人時ペア/対戦パターン循環テスト観点を追加                                   |
+| 1.6 | 2026-11-10 | 対戦とコート仲間の偏りを、貪欲候補・局所改善・コート仲間ペナルティで抑える                |

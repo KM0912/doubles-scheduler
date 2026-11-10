@@ -284,6 +284,7 @@ state = addPlayer(state, {
 - 試合数が少ない人を優先する
 - 連続待機を避ける
 - 同じペア・同じ対戦相手の繰り返しを避ける
+- 同じ4人、または同じ3人が再び同じコートに入ることを避ける
 - 同じ出場者セットの循環を避ける
 - 4人ちょうどの場合、3通りのペアを偏りなく回す
 - `rating` や勝敗履歴がある場合、チーム間の強さを近づける
@@ -298,7 +299,8 @@ const proposal = generateNextRound(state, {
   weights: {
     balanceGames: 8,
     avoidRepeatedPair: 10,
-    avoidRepeatedOpponent: 4,
+    avoidRepeatedOpponent: 6,
+    avoidRepeatedCourtGroup: 12,
     avoidConsecutiveRest: 6,
     avoidConsecutivePlay: 2,
     balanceRating: 5,
